@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Studio Fix - Pro</title>
+    <style>
+        :root { --bg: #0d1117; --card: #161b22; --accent: #58a6ff; --text: #c9d1d9; --green: #238636; --error: #f85149; }
+        body { margin: 0; font-family: sans-serif; background: var(--bg); color: var(--text); display: flex; flex-direction: column; height: 100vh; }
+        
+        .header { padding: 15px; background: var(--card); border-bottom: 1px solid #30363d; display: flex; justify-content: space-between; align-items: center; font-weight: bold; }
+        .input-box { padding: 10px; background: var(--card); border-bottom: 1px solid #30363d; }
+        
+        textarea { 
+            width: 100%; height: 70px; background: #0d1117; border: 1px solid #444; 
+            border-radius: 8px; color: white; padding: 10px; box-sizing: border-box; font-size: 14px;
+        }
+
+        .btn-group { display: flex; gap: 5px; margin-top: 10px; }
+        button { flex: 1; padding: 12px; border-radius: 6px; border: none; font-weight: bold; cursor: pointer; font-size: 14px; color: white; }
+        #genBtn { background: var(--green); }
+        .copy-btn { background: #30363d; }
+
+        .tabs { display: flex; background: #161b22; border-bottom: 1px solid #30363d; }
+        .tab { flex: 1; padding: 12px; text-align: center; cursor: pointer; font-size: 13px; font-weight: bold; }
+        .tab.active { border-bottom: 2px solid var(--accent); color: var(--accent); }
+
+        .content { flex: 1; overflow: auto; display: none; background: #010409; }
+        .content.active { display: block; }
+        
+        pre { white-space: pre-wrap; word-wrap: break-word; font-family: monospace; color: #7ee787; padding: 15px; margin: 0; font-size: 12px; }
+        iframe { width: 100%; height: 100%; border: none; background: white; }
+        
+        #error-display { color: var(--error); padding: 10px; font-size: 12px; display: none; background: rgba(248, 81, 73, 0.1); }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <span>AI STUDIO 1.5</span>
+        <span id="status" style="font-size: 10px; color: var(--accent);">READY</span>
+    </div>
+
+    <div class="input-box">
+        <textarea id="prompt" placeholder="Write your command (e.g., Build a Portfolio page)"></textarea>
+        <div id="error-display"></div>
+        <div class="btn-group">
+            <button id="genBtn" onclick="generate()">GENERATE CODE</button>
+            <button class="copy-btn" onclick="copyCode()">COPY</button>
+        </div>
+    </div>
+
+    <div class="tabs">
+        <div class="tab active" id="codeTabHead" onclick="showTab('codeTab')">CODE</div>
+        <div class="tab" id="previewTabHead" onclick="showTab('previewTab')">PREVIEW</div>
+    </div>
+
+    <div id="codeTab" class="content active">
+        <pre id="output">App code will appear here...</pre>
+    </div>
+
+    <div id="previewTab" class="content">
+        <iframe id="previewFrame"></iframe>
+    </div>
+
+    <script type="module">
+        import { GoogleGenerativeAI } from "https://esm.run/@google/generative-ai";
+
+        // IMPORTANT: Model naming fixed for v1beta
+        const API_KEY = "AIzaSyDsa7HLbx_Qft5eTuc2RYwlmYkZYMrO_5M";
+        const genAI = new GoogleGenerativeAI(API_KEY);
+
+        window.generate = async function() {
+            const promptInput = document.getElementById('prompt');
+            const outputDiv = document.getElementById('output');
+            const status = document.getElementById('status');
+            const btn = document.getElementById('genBtn');
+            const errDiv = document.getElementById('error-display');
+
+            if(!promptInput.value) return alert("Pehle kuch likhein!");
+
+            outputDiv.innerText = "";
+            errDiv.style.display = "none";
+            status.innerText = "WRITING...";
+            btn.disabled = true;
+
+            try {
+                // FIXED: Using 'gemini-1.5-flash-latest' for better compatibility
+                const model = genAI.getGenerativeModel({ 
+                    model: "gemini-1.5-flash-latest",
+                    systemInstruction: "You are a mobile-friendly coder. Provide ONLY the full code in a single HTML file (with CSS/JS inside). No preamble, no explanation."
+                });
+
+                const result = await model.generateContentStream(promptInput.value);
+                
+                let fullCode = "";
+                for await (const chunk of result.stream) {
+                    const chunkText = chunk.text();
+                    fullCode += chunkText;
+                    outputDiv.innerText = fullCode;
+                }
+                
+                // Remove Markdown and update preview
+                const cleanCode = fullCode.replace(/```html|```/g, "").trim();
+                document.getElementById('previewFrame').srcdoc = cleanCode;
+                status.innerText = "DONE";
+
+            } catch (error) {
+                errDiv.style.display = "block";
+                errDiv.innerText = "Error: " + error.message;
+                status.innerText = "ERROR";
+            } finally {
+                btn.disabled = false;
+            }
+        }
+
+        window.showTab = function(id) {
+            document.querySelectorAll('.content').forEach(c => c.classList.remove('active'));
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.getElementById(id).classList.add('active');
+            document.getElementById(id + 'Head').classList.add('active');
+        }
+
+        window.copyCode = function() {
+            navigator.clipboard.writeText(document.getElementById('output').innerText);
+            alert("Copied!");
+        }
+    </script>
+</body>
+</html>

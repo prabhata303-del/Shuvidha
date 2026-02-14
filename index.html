@@ -3,52 +3,89 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Smart Video Downloader</title>
+    <title>AI Smart Writer & Grammar Fixer</title>
     <style>
-        body { font-family: sans-serif; background-color: #0f0f0f; color: white; text-align: center; padding: 20px; }
-        .app-card { background: #1e1e1e; padding: 25px; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); max-width: 400px; margin: auto; }
-        input { width: 100%; padding: 12px; margin: 15px 0; border-radius: 8px; border: 1px solid #444; background: #2b2b2b; color: white; box-sizing: border-box; }
-        .btn { background: #ff0000; color: white; border: none; padding: 15px; width: 100%; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 16px; }
-        .ad-slot { background: #333; margin: 20px 0; padding: 10px; font-size: 10px; color: #888; border: 1px dashed #555; }
-        #status { margin-top: 15px; color: #00ffcc; font-size: 14px; }
+        body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; display: flex; justify-content: center; padding: 20px; margin: 0; }
+        .app-container { background: white; padding: 25px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); width: 100%; max-width: 450px; text-align: center; }
+        h2 { color: #1a73e8; font-size: 22px; margin-bottom: 5px; }
+        p.subtitle { color: #666; font-size: 13px; margin-bottom: 20px; }
+        textarea { width: 100%; height: 120px; padding: 12px; border: 1px solid #ddd; border-radius: 12px; resize: none; box-sizing: border-box; font-size: 15px; outline: none; }
+        textarea:focus { border-color: #1a73e8; }
+        .btn { background: #1a73e8; color: white; border: none; padding: 14px; width: 100%; border-radius: 10px; font-size: 16px; cursor: pointer; margin-top: 15px; font-weight: 600; transition: 0.3s; }
+        .btn:hover { background: #1557b0; }
+        #output { margin-top: 20px; padding: 15px; background: #f8f9fa; border-radius: 12px; border-left: 5px solid #1a73e8; color: #333; text-align: left; display: none; white-space: pre-wrap; font-size: 15px; }
+        .share-btn { background: #25D366; margin-top: 10px; display: none; }
+        .ad-space { background: #fafafa; border: 1px dashed #ccc; padding: 10px; margin: 15px 0; font-size: 11px; color: #999; border-radius: 8px; }
+        .loader { display: none; color: #1a73e8; margin-top: 10px; font-weight: bold; }
     </style>
 </head>
 <body>
 
-    <div class="app-card">
-        <h2>📥 Video Downloader</h2>
-        <p style="color: #aaa; font-size: 12px;">Instagram, FB & More</p>
+<div class="app-container">
+    <h2>✍️ AI Smart Writer</h2>
+    <p class="subtitle">Email, Message ya Grammar theek karein AI se</p>
 
-        <div class="ad-slot">ADVERTISEMENT (Ads Code yahan daalein)</div>
+    <div class="ad-space">ADVERTISEMENT (Place AdSense Code Here)</div>
 
-        <input type="text" id="videoUrl" placeholder="Video link yahan paste karein...">
-        <button class="btn" onclick="startDownload()">Download Video</button>
+    <textarea id="userInput" placeholder="Yahan apna text likhein..."></textarea>
+    
+    <button class="btn" onclick="askGemini()">AI Se Result Paayein</button>
+    <div id="loader" class="loader">AI soch raha hai... 🤖</div>
 
-        <div id="status"></div>
+    <div id="output"></div>
+    
+    <button id="whatsappBtn" class="btn share-btn" onclick="shareWhatsApp()">WhatsApp par Share karein</button>
 
-        <div class="ad-slot">ADVERTISEMENT (Ads Code yahan daalein)</div>
-    </div>
+    <div class="ad-space">ADVERTISEMENT (Place AdSense Code Here)</div>
+</div>
 
-    <script>
-        function startDownload() {
-            const url = document.getElementById('videoUrl').value;
-            const status = document.getElementById('status');
+<script>
+    async function askGemini() {
+        const text = document.getElementById('userInput').value;
+        const outputDiv = document.getElementById('output');
+        const loader = document.getElementById('loader');
+        const shareBtn = document.getElementById('whatsappBtn');
+        
+        if (!text) { alert("Pehle kuch likhein!"); return; }
 
-            if (!url) {
-                alert("Pehle link toh paste karo!");
-                return;
-            }
+        // Aapki API Key yahan set kar di gayi hai
+        const API_KEY = "AlzaSyDsa7HLbx_Qft5eTuc2RYwlmYkZYmRO_5M"; 
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${API_KEY}`;
 
-            status.innerText = "Processing... Please wait...";
+        loader.style.display = "block";
+        outputDiv.style.display = "none";
+        shareBtn.style.display = "none";
 
-            // API SETUP: 
-            // Yahan RapidAPI ka code lagta hai. 
-            // Abhi ke liye main isse ek generic alert par set kar raha hoon.
-            setTimeout(() => {
-                status.innerHTML = `<span style="color: #ffcc00;">Note: Isse live karne ke liye aapko RapidAPI key ki zaroorat hogi jo main aapko guide kar sakta hoon.</span>`;
-            }, 2000);
+        const data = {
+            contents: [{ parts: [{ text: "Rewrite and fix grammar in professional way (mix of Hindi and English): " + text }] }]
+        };
+
+        try {
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+            const result = await response.json();
+            const aiResponse = result.candidates[0].content.parts[0].text;
+            
+            outputDiv.innerText = aiResponse;
+            outputDiv.style.display = "block";
+            shareBtn.style.display = "block";
+        } catch (error) {
+            outputDiv.innerText = "Error: Internet check karein ya API Key ki limit dekhein.";
+            outputDiv.style.display = "block";
+        } finally {
+            loader.style.display = "none";
         }
-    </script>
+    }
+
+    function shareWhatsApp() {
+        const resultText = document.getElementById('output').innerText;
+        const shareMsg = encodeURIComponent("Check out this AI Response: \n\n" + resultText);
+        window.open(`https://wa.me/?text=${shareMsg}`, '_blank');
+    }
+</script>
 
 </body>
 </html>

@@ -1,25 +1,925 @@
-
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Talking Rabbit</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-  <script type="importmap">
-{
-  "imports": {
-    "@google/genai": "https://esm.sh/@google/genai@^1.41.0",
-    "react-dom/": "https://esm.sh/react-dom@^19.2.4/",
-    "react/": "https://esm.sh/react@^19.2.4/",
-    "react": "https://esm.sh/react@^19.2.4"
-  }
-}
-</script>
-<link rel="stylesheet" href="/index.css">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="#f093fb">
+
+    <!-- Inline CSS for all styling and animations -->
+    <style>
+        /* Base Styles */
+        body, html {
+            margin: 0;
+            padding: 0;
+            font-family: "Comic Sans MS", cursive, sans-serif;
+            overflow: hidden;
+            height: 100%;
+            touch-action: none; /* Prevent double-tap zoom */
+            user-select: none;
+            background-color: #f0f0f0;
+        }
+
+        /* Full-screen containers and transitions */
+        .screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.5s ease-in-out, visibility 0.5s ease-in-out;
+        }
+        .screen.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        /* ---------------------------------------------------------------------- */
+        /* Welcome Screen Styling */
+        /* ---------------------------------------------------------------------- */
+        #welcome-screen {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        }
+
+        /* Rabbit Image */
+        #welcome-image {
+            width: 90%;
+            max-width: 400px;
+            border-radius: 30px;
+            border: 8px solid rgba(255, 255, 255, 0.3);
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            animation: float 3s ease-in-out infinite alternate;
+        }
+
+        /* Floating Animation */
+        @keyframes float {
+            0% { transform: translateY(0); }
+            100% { transform: translateY(-20px); }
+        }
+
+        /* Play Button */
+        #play-button {
+            margin-top: 50px;
+            padding: 20px 40px;
+            font-size: 32px;
+            font-weight: bold;
+            text-transform: uppercase;
+            color: white;
+            border: none;
+            border-radius: 60px;
+            cursor: pointer;
+            text-shadow: 0 2px 3px rgba(0, 0, 0, 0.2);
+            background: linear-gradient(135deg, #ff69b4 0%, #ff1493 100%);
+            box-shadow: 0 10px 30px rgba(255, 105, 180, 0.5);
+            animation: pulse 1.5s ease-out infinite alternate;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.2s ease;
+        }
+
+        #play-button:active {
+            transform: scale(0.95);
+            box-shadow: 0 5px 15px rgba(255, 105, 180, 0.5);
+        }
+
+        /* Button Pulse Animation */
+        @keyframes pulse {
+            0% { transform: scale(1); box-shadow: 0 10px 30px rgba(255, 105, 180, 0.5); }
+            100% { transform: scale(1.08); box-shadow: 0 15px 40px rgba(255, 105, 180, 0.8); }
+        }
+
+        /* Ripple effect on click (hidden by default) */
+        .ripple {
+            position: absolute;
+            border-radius: 50%;
+            background-color: rgba(255, 255, 255, 0.5);
+            width: 0;
+            height: 0;
+            transform: translate(-50%, -50%);
+            animation: ripple-effect 0.6s ease-out;
+        }
+
+        @keyframes ripple-effect {
+            0% { width: 0; height: 0; opacity: 1; }
+            100% { width: 200%; height: 200%; opacity: 0; }
+        }
+
+        /* ---------------------------------------------------------------------- */
+        /* Main App Screen Styling */
+        /* ---------------------------------------------------------------------- */
+        #main-app-screen {
+            background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+        }
+
+        /* Video Background */
+        #video-container {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+        }
+        #video-container video {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: opacity 0.3s ease;
+            opacity: 0;
+        }
+        #video-container video.active {
+            opacity: 1;
+        }
+
+        /* Interactive Tap Zones */
+        .tap-zone {
+            position: absolute;
+            cursor: pointer;
+            z-index: 10;
+        }
+        #head-zone {
+            top: 15%;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 150px;
+            height: 150px;
+            border-radius: 50%;
+            /* background: rgba(255,0,0,0.3); debugging area */
+        }
+        #body-zone {
+            top: 40%;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 180px;
+            height: 200px;
+            border-radius: 50%;
+            /* background: rgba(0,255,0,0.3); debugging area */
+        }
+        #feet-zone {
+            bottom: 25%;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 200px;
+            height: 100px;
+            border-radius: 50%;
+            /* background: rgba(0,0,255,0.3); debugging area */
+        }
+
+        /* Shake animation for tap zones */
+        @keyframes shake {
+            0% { transform: translate(-50%, 0) rotate(0deg); }
+            20% { transform: translate(-50%, 0) rotate(-3deg); }
+            40% { transform: translate(-50%, 0) rotate(3deg); }
+            60% { transform: translate(-50%, 0) rotate(-3deg); }
+            80% { transform: translate(-50%, 0) rotate(3deg); }
+            100% { transform: translate(-50%, 0) rotate(0deg); }
+        }
+        .shake {
+            animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both;
+        }
+
+        /* ---------------------------------------------------------------------- */
+        /* Control Panel Buttons */
+        /* ---------------------------------------------------------------------- */
+        #control-panel {
+            position: absolute;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 25px;
+            align-items: center;
+            z-index: 20;
+        }
+
+        .control-button {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            font-size: 36px;
+            border: 5px solid;
+            cursor: pointer;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+            position: relative;
+            transition: all 0.2s ease;
+        }
+        .control-button:active {
+            transform: scale(0.95);
+        }
+
+        /* Specific button styles */
+        #laugh-button {
+            background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+            border-color: #f59e0b;
+        }
+        #music-button {
+            background: linear-gradient(135deg, #a78bfa 0%, #8b5cf6 100%);
+            border-color: #8b5cf6;
+        }
+
+        /* Mic Button Styling */
+        #mic-button {
+            width: 90px;
+            height: 90px;
+            background: linear-gradient(135deg, #ff69b4 0%, #ff1493 100%);
+            border-color: #ff1493;
+            box-shadow: 0 5px 20px rgba(255, 105, 180, 0.4);
+            transition: all 0.3s ease, transform 0.1s ease;
+        }
+        #mic-icon {
+            position: relative;
+            width: 30px;
+            height: 40px;
+            margin: 0 auto;
+            border: 4px solid white;
+            border-radius: 50% 50% 0 0;
+            top: 10px;
+            box-sizing: border-box;
+        }
+        #mic-icon::after {
+            content: "";
+            position: absolute;
+            bottom: -15px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 16px;
+            height: 12px;
+            background: white;
+            border-radius: 0 0 10px 10px;
+        }
+        #mic-icon::before {
+            content: "";
+            position: absolute;
+            bottom: -19px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 10px;
+            height: 5px;
+            background: white;
+        }
+
+        /* Mic Button States */
+        .listening-state {
+            background: linear-gradient(135deg, #a855f7 0%, #9333ea 100%) !important;
+            border-color: #9333ea !important;
+            animation: pulse-border 1s ease-in-out infinite alternate !important;
+        }
+        .speaking-state {
+            background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%) !important;
+            border-color: #f59e0b !important;
+            animation: glow-shadow 1s ease-in-out infinite alternate !important;
+        }
+
+        /* Mic Button Animations */
+        @keyframes pulse-border {
+            0% { box-shadow: 0 0 0 0 rgba(168, 85, 247, 0.4); }
+            100% { box-shadow: 0 0 0 15px rgba(168, 85, 247, 0); }
+        }
+        @keyframes glow-shadow {
+            0% { box-shadow: 0 0 10px 5px rgba(251, 191, 36, 0.5); }
+            100% { box-shadow: 0 0 20px 10px rgba(251, 191, 36, 0.8); }
+        }
+
+        /* ---------------------------------------------------------------------- */
+        /* Status Indicator & Particle Effects */
+        /* ---------------------------------------------------------------------- */
+
+        /* Status Badge */
+        #status-indicator {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 30;
+            padding: 10px 20px;
+            background: linear-gradient(135deg, #a78bfa 0%, #8b5cf6 100%);
+            color: white;
+            border-radius: 30px;
+            font-size: 18px;
+            font-weight: bold;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+            opacity: 0;
+            transition: opacity 0.3s ease-in-out, transform 0.3s ease-in-out;
+        }
+        #status-indicator.show {
+            opacity: 1;
+        }
+
+        /* Floating particles (tap effect) */
+        .tap-particle {
+            position: absolute;
+            font-size: 30px;
+            pointer-events: none;
+            user-select: none;
+            animation: float-up-fade 1.5s ease-out forwards;
+        }
+        @keyframes float-up-fade {
+            0% { opacity: 1; transform: translate(0, 0); }
+            100% { opacity: 0; transform: translate(0, -50px); }
+        }
+
+        /* Falling emojis (laugh/music effect) */
+        .falling-emoji {
+            position: absolute;
+            font-size: 40px;
+            opacity: 0;
+            animation: fall-rotate-fade 4s linear forwards;
+        }
+        @keyframes fall-rotate-fade {
+            0% { opacity: 0; transform: translate(0, -100px) rotate(0deg); }
+            10% { opacity: 1; transform: translate(0, 0) rotate(15deg); }
+            100% { opacity: 0; transform: translate(0, 100vh) rotate(360deg); }
+        }
+
+        /* ---------------------------------------------------------------------- */
+        /* Exit Dialog Modal */
+        /* ---------------------------------------------------------------------- */
+        #exit-modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: none; /* Hidden by default */
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+        }
+        #exit-modal-content {
+            background: linear-gradient(135deg, #a78bfa 0%, #8b5cf6 100%);
+            color: white;
+            padding: 30px;
+            border-radius: 20px;
+            text-align: center;
+            width: 80%;
+            max-width: 350px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+            animation: bounce-in 0.3s ease-out;
+        }
+        @keyframes bounce-in {
+            0% { transform: scale(0.8); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        #exit-modal-content h3 {
+            margin-top: 0;
+            font-size: 24px;
+        }
+        #exit-modal-buttons {
+            display: flex;
+            justify-content: space-around;
+            margin-top: 20px;
+        }
+        .exit-button {
+            padding: 10px 25px;
+            border: none;
+            border-radius: 30px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            color: white;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
+            transition: transform 0.1s ease;
+        }
+        .exit-button:active {
+            transform: scale(0.95);
+        }
+        #exit-yes {
+            background: linear-gradient(135deg, #ff69b4 0%, #ff1493 100%);
+        }
+        #exit-no {
+            background: linear-gradient(135deg, #00c6ff 0%, #0072ff 100%);
+        }
+
+        /* Mobile optimization adjustments */
+        @media screen and (max-width: 600px) {
+            #control-panel { gap: 15px; }
+            .control-button { width: 70px; height: 70px; font-size: 30px; border-width: 4px; }
+            #mic-button { width: 80px; height: 80px; border-width: 4px; }
+            #welcome-image { max-width: 320px; }
+            #play-button { font-size: 28px; padding: 18px 30px; }
+        }
+        @media screen and (max-width: 400px) {
+            .control-button { width: 60px; height: 60px; font-size: 28px; }
+            #mic-button { width: 70px; height: 70px; }
+            #welcome-image { max-width: 280px; }
+            #play-button { font-size: 24px; padding: 15px 25px; }
+        }
+    </style>
 </head>
-  <body class="bg-sky-50">
-    <div id="root"></div>
-  <script type="module" src="/index.tsx"></script>
+<body>
+
+    <!-- ---------------------------------------------------------------------- -->
+    <!-- Welcome Screen -->
+    <!-- ---------------------------------------------------------------------- -->
+    <section id="welcome-screen" class="screen active">
+        <img id="welcome-image" src="tom_welcome.jpg" alt="Talking Rabbit Welcome Image">
+        <button id="play-button">▶ Play</button>
+    </section>
+
+    <!-- ---------------------------------------------------------------------- -->
+    <!-- Main App Screen -->
+    <!-- ---------------------------------------------------------------------- -->
+    <section id="main-app-screen" class="screen">
+        <!-- Video Container -->
+        <div id="video-container">
+            <!-- Videos are preloaded, muted for autoplay, and play inline on iOS -->
+            <video id="idle-video" src="tom_standing.mp4" loop muted playsinline preload="auto" class="active"></video>
+            <video id="listening-video" src="tom_listing.mp4" muted playsinline preload="auto"></video>
+            <video id="talking-video" src="tom_talking.mp4" muted playsinline preload="auto"></video>
+            <video id="laughing-video" src="laughing.mp4" muted playsinline preload="auto"></video>
+            <video id="music-video" src="music.mp4" muted playsinline preload="auto"></video>
+        </div>
+
+        <!-- Tap Zones (invisible clickable areas) -->
+        <div id="head-zone" class="tap-zone"></div>
+        <div id="body-zone" class="tap-zone"></div>
+        <div id="feet-zone" class="tap-zone"></div>
+
+        <!-- Control Buttons -->
+        <div id="control-panel">
+            <button id="laugh-button" class="control-button">😄</button>
+            <button id="mic-button" class="control-button">
+                <div id="mic-icon"></div>
+            </button>
+            <button id="music-button" class="control-button">🎵</button>
+        </div>
+
+        <!-- Status Indicator -->
+        <div id="status-indicator"></div>
+    </section>
+
+    <!-- Hidden audio elements for background sound effects -->
+    <audio id="laugh-audio" src="laughing.wav" preload="auto"></audio>
+    <audio id="music-audio" src="music.wav" preload="auto"></audio>
+
+    <!-- ---------------------------------------------------------------------- -->
+    <!-- Exit Confirmation Dialog -->
+    <!-- ---------------------------------------------------------------------- -->
+    <div id="exit-modal-overlay">
+        <div id="exit-modal-content">
+            <h3>Do you want to exit?</h3>
+            <div id="exit-modal-buttons">
+                <button id="exit-yes" class="exit-button">Yes</button>
+                <button id="exit-no" class="exit-button">No</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ---------------------------------------------------------------------- -->
+    <!-- Inline JavaScript for Application Logic -->
+    <!-- ---------------------------------------------------------------------- -->
+    <script>
+        // --- State Management ---
+        const AppState = {
+            WELCOME: 'WELCOME',
+            IDLE: 'IDLE',
+            LISTENING: 'LISTENING',
+            TALKING: 'TALKING',
+            LAUGHING: 'LAUGHING',
+            MUSIC: 'MUSIC'
+        };
+
+        let currentState = AppState.WELCOME;
+        let audioContext = null;
+        let recorder = null;
+        let mediaStream = null;
+        let recordedAudioChunks = [];
+        let laughPlayCount = 0;
+        let musicPlayCount = 0;
+
+        // --- DOM Elements ---
+        const welcomeScreen = document.getElementById('welcome-screen');
+        const mainAppScreen = document.getElementById('main-app-screen');
+        const playButton = document.getElementById('play-button');
+        const statusIndicator = document.getElementById('status-indicator');
+
+        // Video elements
+        const idleVideo = document.getElementById('idle-video');
+        const listeningVideo = document.getElementById('listening-video');
+        const talkingVideo = document.getElementById('talking-video');
+        const laughingVideo = document.getElementById('laughing-video');
+        const musicVideo = document.getElementById('music-video');
+        const videoElements = [idleVideo, listeningVideo, talkingVideo, laughingVideo, musicVideo];
+
+        // Button elements
+        const micButton = document.getElementById('mic-button');
+        const laughButton = document.getElementById('laugh-button');
+        const musicButton = document.getElementById('music-button');
+
+        // Audio elements (for sound effects)
+        const laughAudio = document.getElementById('laugh-audio');
+        const musicAudio = document.getElementById('music-audio');
+
+        // Tap zones
+        const headZone = document.getElementById('head-zone');
+        const bodyZone = document.getElementById('body-zone');
+        const feetZone = document.getElementById('feet-zone');
+
+        // Exit modal elements
+        const exitModalOverlay = document.getElementById('exit-modal-overlay');
+        const exitYesButton = document.getElementById('exit-yes');
+        const exitNoButton = document.getElementById('exit-no');
+
+        // --- Event Listeners ---
+        document.addEventListener('DOMContentLoaded', initApp);
+        playButton.addEventListener('click', () => {
+            // Ripple effect on click
+            const ripple = document.createElement('span');
+            ripple.className = 'ripple';
+            playButton.appendChild(ripple);
+            ripple.style.left = event.clientX - playButton.getBoundingClientRect().left + 'px';
+            ripple.style.top = event.clientY - playButton.getBoundingClientRect().top + 'px';
+            ripple.addEventListener('animationend', () => ripple.remove());
+
+            // Start main app
+            changeState(AppState.IDLE);
+        });
+
+        // Tap zone handlers
+        headZone.addEventListener('click', handleTapZoneClick);
+        bodyZone.addEventListener('click', handleTapZoneClick);
+        feetZone.addEventListener('click', handleTapZoneClick);
+
+        // Control button handlers
+        laughButton.addEventListener('click', handleLaughClick);
+        micButton.addEventListener('click', handleMicClick);
+        musicButton.addEventListener('click', handleMusicClick);
+
+        // Exit dialog handlers
+        exitYesButton.addEventListener('click', handleExitConfirm);
+        exitNoButton.addEventListener('click', handleExitCancel);
+
+        // --- Core Application Logic ---
+
+        /**
+         * Initializes audio and video elements, sets initial state.
+         */
+        function initApp() {
+            // Request camera/microphone access immediately (for iOS compatibility and faster start)
+            if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+                navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
+                    mediaStream = stream;
+                }).catch(err => console.error("Mic access denied or unavailable:", err));
+            }
+
+            // Start playing the idle video on load. Muted and Autoplay.
+            idleVideo.addEventListener('canplaythrough', () => {
+                if (idleVideo.paused) idleVideo.play();
+            });
+            // Ensure videos loop correctly
+            videoElements.forEach(video => {
+                video.addEventListener('ended', () => {
+                    if (video.loop) video.currentTime = 0;
+                });
+            });
+        }
+
+        /**
+         * Updates the app state and manages UI transitions.
+         * @param {string} newState - The new state to transition to.
+         */
+        function changeState(newState) {
+            // Ignore state changes during listening or talking
+            if ((currentState === AppState.LISTENING || currentState === AppState.TALKING) && newState !== AppState.IDLE) {
+                return;
+            }
+
+            currentState = newState;
+            console.log("State changed to:", newState);
+
+            // UI changes based on state
+            if (newState === AppState.IDLE) {
+                showScreen(mainAppScreen);
+                playVideo(idleVideo, true);
+                micButton.classList.remove('listening-state', 'speaking-state');
+                statusIndicator.classList.remove('show');
+            } else if (newState === AppState.LISTENING) {
+                playVideo(listeningVideo, false);
+                micButton.classList.add('listening-state');
+                updateStatus("Listening...");
+            } else if (newState === AppState.TALKING) {
+                playVideo(talkingVideo, false);
+                micButton.classList.remove('listening-state');
+                micButton.classList.add('speaking-state');
+                updateStatus("Rabbit speaking...");
+            } else if (newState === AppState.LAUGHING) {
+                playVideo(laughingVideo, true);
+                updateStatus("Ha ha ha ha!");
+            } else if (newState === AppState.MUSIC) {
+                playVideo(musicVideo, true);
+                updateStatus("Let's dance!");
+            } else if (newState === AppState.WELCOME) {
+                showScreen(welcomeScreen);
+            }
+        }
+
+        /**
+         * Shows the requested screen with a fade transition.
+         * @param {HTMLElement} screenToShow - The screen element to display.
+         */
+        function showScreen(screenToShow) {
+            document.querySelectorAll('.screen').forEach(screen => {
+                screen.classList.remove('active');
+            });
+            screenToShow.classList.add('active');
+        }
+
+        /**
+         * Changes the currently playing video.
+         * @param {HTMLVideoElement} newVideo - The video element to play.
+         * @param {boolean} loop - Whether the new video should loop.
+         */
+        function playVideo(newVideo, loop) {
+            // Stop all videos
+            videoElements.forEach(video => {
+                video.classList.remove('active');
+                if (video !== newVideo) {
+                    video.pause();
+                }
+            });
+
+            // Play the new video
+            newVideo.loop = loop;
+            newVideo.classList.add('active');
+            newVideo.currentTime = 0;
+            newVideo.play().catch(error => console.error("Video play error:", error));
+        }
+
+        /**
+         * Updates the floating status badge.
+         * @param {string} message - The message to display.
+         */
+        function updateStatus(message) {
+            statusIndicator.textContent = message;
+            statusIndicator.classList.add('show');
+            clearTimeout(statusIndicator.timer);
+            statusIndicator.timer = setTimeout(() => {
+                statusIndicator.classList.remove('show');
+            }, 3000);
+        }
+
+        // --- Interactive Features ---
+
+        /**
+         * Handles clicks on the invisible tap zones.
+         * Triggers vibration, shake animation, and particle effects.
+         */
+        function handleTapZoneClick(event) {
+            if (currentState !== AppState.IDLE) return;
+
+            // 1. Shake animation on the element (or body/video)
+            // For simplicity, let's shake the rabbit video by proxy
+            const videoToShake = idleVideo.classList.contains('active') ? idleVideo : talkingVideo;
+            videoToShake.classList.add('shake');
+            videoToShake.addEventListener('animationend', () => videoToShake.classList.remove('shake'), { once: true });
+
+            // 2. Vibration feedback
+            if (window.navigator.vibrate) {
+                window.navigator.vibrate(50);
+            }
+
+            // 3. Status message update
+            const messages = ["Hehe! That tickles!", "Ha ha ha!", "Stop it! Haha!", "Don't touch me there!"];
+            updateStatus(messages[Math.floor(Math.random() * messages.length)]);
+
+            // 4. Particle effect generation
+            const emojis = ['⭐', '💫', '✨', '🌟', '💥', '❤️', '💛', '💚', '💙', '💜'];
+            for (let i = 0; i < 5; i++) {
+                createParticle(event.clientX, event.clientY, emojis[Math.floor(Math.random() * emojis.length)]);
+            }
+        }
+
+        /**
+         * Creates and animates a particle emoji at specified coordinates.
+         * @param {number} x - The x-coordinate for particle spawn.
+         * @param {number} y - The y-coordinate for particle spawn.
+         * @param {string} emoji - The emoji character to use.
+         */
+        function createParticle(x, y, emoji) {
+            const particle = document.createElement('div');
+            particle.className = 'tap-particle';
+            particle.textContent = emoji;
+            particle.style.left = `${x}px`;
+            particle.style.top = `${y}px`;
+            document.body.appendChild(particle);
+            setTimeout(() => particle.remove(), 1500); // Remove particle after animation
+        }
+
+        // --- Button Click Handlers ---
+
+        /**
+         * Handles the "Laugh" button click. Plays audio and video for 2 loops.
+         */
+        function handleLaughClick() {
+            if (currentState !== AppState.IDLE) return;
+            changeState(AppState.LAUGHING);
+
+            // Play audio 2 times
+            laughPlayCount = 0;
+            const playLoop = () => {
+                laughAudio.play().then(() => {
+                    laughPlayCount++;
+                    laughAudio.onended = () => {
+                        if (laughPlayCount < 2) {
+                            laughAudio.currentTime = 0;
+                            playLoop();
+                        } else {
+                            changeState(AppState.IDLE);
+                        }
+                    };
+                }).catch(err => console.error("Audio play error:", err));
+            };
+            playLoop();
+
+            // Falling emoji animation
+            createFallingEmojis('😂', 15);
+        }
+
+        /**
+         * Handles the "Music" button click. Plays audio and video for 2 loops.
+         */
+        function handleMusicClick() {
+            if (currentState !== AppState.IDLE) return;
+            changeState(AppState.MUSIC);
+
+            // Play audio 2 times
+            musicPlayCount = 0;
+            const playLoop = () => {
+                musicAudio.play().then(() => {
+                    musicPlayCount++;
+                    musicAudio.onended = () => {
+                        if (musicPlayCount < 2) {
+                            musicAudio.currentTime = 0;
+                            playLoop();
+                        } else {
+                            changeState(AppState.IDLE);
+                        }
+                    };
+                }).catch(err => console.error("Audio play error:", err));
+            };
+            playLoop();
+
+            // Falling emoji animation
+            createFallingEmojis('🎵', 15);
+        }
+
+        /**
+         * Creates falling emoji animation.
+         * @param {string} emoji - The emoji character to drop.
+         * @param {number} count - Number of emojis to drop.
+         */
+        function createFallingEmojis(emoji, count) {
+            for (let i = 0; i < count; i++) {
+                setTimeout(() => {
+                    const fallingEmoji = document.createElement('div');
+                    fallingEmoji.className = 'falling-emoji';
+                    fallingEmoji.textContent = emoji;
+                    fallingEmoji.style.left = `${Math.random() * 100}vw`;
+                    fallingEmoji.style.animationDelay = `${i * 0.2}s`;
+                    document.body.appendChild(fallingEmoji);
+                    setTimeout(() => fallingEmoji.remove(), 4000);
+                }, i * 100);
+            }
+        }
+
+        /**
+         * Handles the "Mic" button click. Starts recording user audio.
+         */
+        function handleMicClick() {
+            if (currentState !== AppState.IDLE) return;
+            if (mediaStream) {
+                startRecording();
+            } else {
+                updateStatus("Microphone not available.");
+            }
+        }
+
+        /**
+         * Starts the audio recording process using MediaRecorder API.
+         */
+        function startRecording() {
+            changeState(AppState.LISTENING);
+            recordedAudioChunks = [];
+
+            // MediaRecorder setup with audio processing constraints
+            const options = { mimeType: 'audio/webm; codecs=opus' };
+            const audioSettings = {
+                echoCancellation: true,
+                noiseSuppression: true,
+                autoGainControl: true
+            };
+
+            navigator.mediaDevices.getUserMedia({ audio: audioSettings })
+                .then(stream => {
+                    recorder = new MediaRecorder(stream, options);
+                    recorder.ondataavailable = event => {
+                        if (event.data.size > 0) {
+                            recordedAudioChunks.push(event.data);
+                        }
+                    };
+                    recorder.onstop = processRecording;
+                    recorder.start();
+
+                    // Stop recording after 5 seconds
+                    setTimeout(() => {
+                        if (recorder && recorder.state === 'recording') {
+                            recorder.stop();
+                        }
+                    }, 5000);
+                })
+                .catch(err => {
+                    console.error("Microphone access failed:", err);
+                    updateStatus("Microphone access failed!");
+                    changeState(AppState.IDLE);
+                });
+        }
+
+        /**
+         * Processes the recorded audio: pitch shift and playback.
+         */
+        function processRecording() {
+            changeState(AppState.TALKING);
+
+            // Create blob from chunks
+            const audioBlob = new Blob(recordedAudioChunks, { type: 'audio/webm' });
+            const reader = new FileReader();
+
+            reader.onload = () => {
+                const audioData = reader.result;
+                if (!audioContext) {
+                    audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                }
+
+                audioContext.decodeAudioData(audioData, buffer => {
+                    const source = audioContext.createBufferSource();
+                    source.buffer = buffer;
+
+                    // Apply pitch shift (playback rate 1.5x)
+                    source.playbackRate.value = 1.5;
+
+                    source.connect(audioContext.destination);
+                    source.onended = () => {
+                        changeState(AppState.IDLE);
+                    };
+                    source.start(0);
+
+                }, err => {
+                    console.error("Audio decoding error:", err);
+                    changeState(AppState.IDLE);
+                });
+            };
+            reader.readAsArrayBuffer(audioBlob);
+        }
+
+        // --- Android Back Button Handling ---
+
+        /**
+         * Handles the Android back button press (History API).
+         */
+        window.onpopstate = () => {
+            if (currentState !== AppState.WELCOME) {
+                // Prevent going back to welcome screen immediately
+                history.pushState(null, '', location.href);
+                showExitDialog();
+            }
+        };
+
+        /**
+         * Displays the exit confirmation dialog.
+         */
+        function showExitDialog() {
+            exitModalOverlay.style.display = 'flex';
+        }
+
+        /**
+         * Confirms exit, returns to welcome screen.
+         */
+        function handleExitConfirm() {
+            exitModalOverlay.style.display = 'none';
+            // Return to welcome screen state
+            changeState(AppState.WELCOME);
+        }
+
+        /**
+         * Cancels exit, closes dialog.
+         */
+        function handleExitCancel() {
+            exitModalOverlay.style.display = 'none';
+        }
+
+        // Initialize history state on app start for back button handling
+        window.addEventListener('load', () => {
+            history.pushState(null, '', location.href);
+        });
+    </script>
+
 </body>
 </html>

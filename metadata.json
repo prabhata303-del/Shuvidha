@@ -1,0 +1,8 @@
+
+{
+  "name": "Talking Rabbit",
+  "description": "An interactive, voice-driven talking rabbit powered by the Gemini API. Speak to the rabbit and hear it respond in real-time.",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}

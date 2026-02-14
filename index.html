@@ -3,91 +3,52 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Image to PDF Converter - Fast & Free</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <title>Smart Video Downloader</title>
     <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f7f6; margin: 0; display: flex; flex-direction: column; align-items: center; }
-        .container { background: white; padding: 2rem; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); width: 90%; max-width: 500px; margin-top: 50px; text-align: center; }
-        h1 { color: #333; font-size: 24px; }
-        .ad-space { background: #eee; margin: 20px 0; padding: 10px; border: 1px dashed #bbb; color: #888; font-size: 12px; min-height: 100px; }
-        #imageInput { margin: 20px 0; border: 2px solid #007bff; padding: 10px; border-radius: 5px; width: 100%; box-sizing: border-box; }
-        #preview { width: 100%; max-height: 300px; object-fit: contain; margin-top: 15px; display: none; border-radius: 8px; }
-        .btn { background: #28a745; color: white; border: none; padding: 12px 25px; font-size: 16px; border-radius: 5px; cursor: pointer; width: 100%; margin-top: 20px; transition: 0.3s; }
-        .btn:disabled { background: #ccc; cursor: not-allowed; }
-        .btn:hover:not(:disabled) { background: #218838; }
-        footer { margin-top: 30px; font-size: 14px; color: #777; }
+        body { font-family: sans-serif; background-color: #0f0f0f; color: white; text-align: center; padding: 20px; }
+        .app-card { background: #1e1e1e; padding: 25px; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); max-width: 400px; margin: auto; }
+        input { width: 100%; padding: 12px; margin: 15px 0; border-radius: 8px; border: 1px solid #444; background: #2b2b2b; color: white; box-sizing: border-box; }
+        .btn { background: #ff0000; color: white; border: none; padding: 15px; width: 100%; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 16px; }
+        .ad-slot { background: #333; margin: 20px 0; padding: 10px; font-size: 10px; color: #888; border: 1px dashed #555; }
+        #status { margin-top: 15px; color: #00ffcc; font-size: 14px; }
     </style>
 </head>
 <body>
 
-    <div class="container">
-        <h1>🖼️ Image to PDF</h1>
-        <p>Simple aur fast converter</p>
+    <div class="app-card">
+        <h2>📥 Video Downloader</h2>
+        <p style="color: #aaa; font-size: 12px;">Instagram, FB & More</p>
 
-        <div class="ad-space">
-            ADVERTISEMENT <br> (Apna AdSense code yahan paste karein)
-        </div>
+        <div class="ad-slot">ADVERTISEMENT (Ads Code yahan daalein)</div>
 
-        <input type="file" id="imageInput" accept="image/*">
-        <img id="preview" src="" alt="Preview">
-        
-        <button id="downloadBtn" class="btn" disabled>Download PDF</button>
+        <input type="text" id="videoUrl" placeholder="Video link yahan paste karein...">
+        <button class="btn" onclick="startDownload()">Download Video</button>
 
-        <div class="ad-space">
-            ADVERTISEMENT <br> (Apna AdSense code yahan paste karein)
-        </div>
+        <div id="status"></div>
+
+        <div class="ad-slot">ADVERTISEMENT (Ads Code yahan daalein)</div>
     </div>
 
-    <footer>Made with ❤️ using AI</footer>
-
     <script>
-        const imageInput = document.getElementById('imageInput');
-        const preview = document.getElementById('preview');
-        const downloadBtn = document.getElementById('downloadBtn');
-        let imgData = null;
+        function startDownload() {
+            const url = document.getElementById('videoUrl').value;
+            const status = document.getElementById('status');
 
-        // Image select hone par preview dikhana
-        imageInput.addEventListener('change', function(e) {
-            const file = e.target.files[0];
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = function(event) {
-                    imgData = event.target.result;
-                    preview.src = imgData;
-                    preview.style.display = 'block';
-                    downloadBtn.disabled = false;
-                }
-                reader.readAsDataURL(file);
+            if (!url) {
+                alert("Pehle link toh paste karo!");
+                return;
             }
-        });
 
-        // PDF download function
-        downloadBtn.addEventListener('click', function() {
-            const { jsPDF } = window.jspdf;
-            const pdf = new jsPDF();
-            
-            // Image ko PDF mein adjust karna
-            const img = new Image();
-            img.src = imgData;
-            
-            img.onload = function() {
-                const imgWidth = 190; // mm mein
-                const imgHeight = (img.height * imgWidth) / img.width;
-                
-                pdf.addImage(imgData, 'JPEG', 10, 10, imgWidth, imgHeight);
-                pdf.save("Converted-File.pdf");
-            };
-        });
-    </script>
-</body>
-</html>
-            document.getElementById(id + 'Head').classList.add('active');
-        }
+            status.innerText = "Processing... Please wait...";
 
-        window.copyCode = function() {
-            navigator.clipboard.writeText(document.getElementById('output').innerText);
-            alert("Copied!");
+            // API SETUP: 
+            // Yahan RapidAPI ka code lagta hai. 
+            // Abhi ke liye main isse ek generic alert par set kar raha hoon.
+            setTimeout(() => {
+                status.innerHTML = `<span style="color: #ffcc00;">Note: Isse live karne ke liye aapko RapidAPI key ki zaroorat hogi jo main aapko guide kar sakta hoon.</span>`;
+            }, 2000);
         }
     </script>
+
 </body>
 </html>
